@@ -2,14 +2,16 @@ package com.template
 
 import android.content.Context
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
+import android.net.ConnectivityManager
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.io.IOException
 import java.util.*
+
 
 class LoadingActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,9 +33,20 @@ class LoadingActivity : AppCompatActivity() {
     private fun readPreference(){
         val sharedPreference =  getSharedPreferences(PREFERENCE_NAME, Context.MODE_PRIVATE)
         when (val url = sharedPreference.getString(URL_KEY, FIRST_TIME)){
-            FIRST_TIME -> getInFirebase()
+            FIRST_TIME -> {
+                if (checkConnection())
+                    getInFirebase()
+                else{
+                    startMainActivity()
+                }
+            }
             NO_DATA -> startMainActivity()
-            else -> startWebActivity(url!!)
+            else -> {
+                if (checkConnection())
+                    startWebActivity(url!!)
+                else
+                    startMainActivity()
+            }
         }
     }
 
@@ -42,15 +55,19 @@ class LoadingActivity : AppCompatActivity() {
         db.collection("database")
             .get()
             .addOnSuccessListener { result ->
-                val resultText = result.documents[0].data?.get("link")
-                if (resultText?.equals("") == true){
-                    writePreference(NO_DATA)
+                try{
+                    val resultText = result.documents[0].data?.get("link")
+                    if (resultText?.equals("") == true){
+                        writePreference(NO_DATA)
+                        startMainActivity()
+                    }
+                    else {
+                        val finalText = "$resultText/?packageid=$packageName&usserid=${UUID.randomUUID()}&getz=${TimeZone.getDefault().id}&getr=utm_source=google-play&utm_medium=organic"
+                        getUrlFromWeb(finalText)
+                    }
+                }catch (e: Exception) {
+                    writePreference(FIRST_TIME)
                     startMainActivity()
-                }
-                else {
-                    val finalText = "$resultText/?packageid=$packageName&usserid=${UUID.randomUUID()}&getz=${TimeZone.getDefault().id}&getr=utm_source=google-play&utm_medium=organic"
-                    writePreference(finalText)
-                    getUrlFromWeb(finalText)
                 }
             }
             .addOnFailureListener {
@@ -88,6 +105,13 @@ class LoadingActivity : AppCompatActivity() {
                     startMainActivity()
             }
         }.start()
+    }
+
+    private fun checkConnection(): Boolean {
+        val connectivityManager = this.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val wifi = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
+        val mobileNetwork = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE)
+        return (wifi!!.isConnected || mobileNetwork!!.isConnected)
     }
 
     companion object{
