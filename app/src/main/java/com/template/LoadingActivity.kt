@@ -5,11 +5,12 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import com.android.volley.Response
+import com.android.volley.toolbox.StringRequest
+import com.android.volley.toolbox.Volley
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import java.io.IOException
+import java.nio.charset.Charset
 import java.util.*
 
 
@@ -85,26 +86,26 @@ class LoadingActivity : AppCompatActivity() {
     }
 
     private fun getUrlFromWeb(url: String)  {
-        Thread {
-            var res: Boolean
-            var urlRes = ""
-            try {
-                res = true
-                val doc: Document = Jsoup.connect(url).get()
-                urlRes = doc.body().text()
-                writePreference(urlRes)
 
-            } catch (e: IOException) {
-                res = false
-                writePreference(NO_DATA)
-            }
-            runOnUiThread {
-                if (res)
-                    startWebActivity(urlRes)
-                else
+        val queue = Volley.newRequestQueue(this)
+        val requestBody = "Accept=application/json" + "User-Agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
+        val stringReq : StringRequest =
+            object : StringRequest(Method.POST, url,
+                Response.Listener { response ->
+                    val strResp = response.toString()
+                    writePreference(strResp)
+                    startWebActivity(strResp)
+                },
+                Response.ErrorListener {
+                    writePreference(NO_DATA)
                     startMainActivity()
+                }
+            ){
+                override fun getBody(): ByteArray {
+                    return requestBody.toByteArray(Charset.defaultCharset())
+                }
             }
-        }.start()
+        queue.add(stringReq)
     }
 
     private fun checkConnection(): Boolean {
