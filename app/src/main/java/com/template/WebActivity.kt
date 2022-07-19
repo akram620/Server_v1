@@ -9,8 +9,6 @@ import android.webkit.CookieSyncManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat.startActivity
-import androidx.core.os.bundleOf
 
 
 class WebActivity : AppCompatActivity() {
@@ -23,7 +21,7 @@ class WebActivity : AppCompatActivity() {
         setContentView(R.layout.activity_web)
 
         webView = findViewById<WebView>(R.id.webView)
-        var urlText = intent.getStringExtra(LoadingActivity.URL_KEY)
+        val urlText = intent.getStringExtra(LoadingActivity.URL_KEY)
 
 
         if(savedInstanceState != null){
